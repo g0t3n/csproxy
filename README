@@ -1,0 +1,46 @@
+[2013.12.30]
+  加了个简单的 prefork
+
+[2013.12.20]
+  server 用 pre-fork + thread 模式，尝试提高并发性
+  参考 goagent,修改 transdata
+
+[long long ago..]
+  加密版本性能感觉会很低(加密消耗CPU)，而且由于rc4的原因，要保证一次recv到完整的数据才能解密正常,但这样驱动编程的select似乎几乎
+  退化成阻塞的socket(稍微好点).
+  继续由于rc4 的原因，我不得不在 send 加密数据前先加上数据的长度，同样recv也是先recv一下数据长度，因此我额外写了个
+  socketlib.py
+
+issue:
+ [done] broken pipe 问题:
+    select 后判断是否读到数据
+
+ [done] connect reset by peer 问题:
+    forget it
+
+ [done] 线程 set noDaemon
+    thread.setDaemon(True)
+
+ [done] 用 xor key代替 rc4.
+    rc4 加密是耗cpu的,改为 xor key 后耗时减少一半，但还没到理想情况.消耗过多cpu导致问题是很可能连接断了.
+
+feature:
+ [done] pre-fork n个进程
+====
+[TO-DO]
+  urgen:
+    youtube / youku 等看视频会断的问题
+
+[TODO-feature]
+    线程池:
+      python的并发而且线程的产生销毁确实是很浪费资源的
+    通过 gfwlist, 以及自定义黑白名单
+
+
+性能测试:
+    line_profiler, memory_profiler
+    但这两者对多线程都支持不算非常好
+    实际中的测试用的的是 www.mogujie.com + weibo.com + youku.com 蘑菇街那样瀑布流式的网页结构是神器
+
+linux 可考虑 epoll,但window没有.另外如果用户数量少,所需要连接数并不多，所以 select 性能跟 epoll一样（短连接）
+OpenVZ,最大线程数设的太低,内存不足.可以调高最大线程数试试.
